@@ -11,11 +11,8 @@ const PORT = process.env.PORT || 5000;
 app.use(cors()); // Permite conexiones desde el Frontend
 app.use(express.json()); // Permite recibir JSON
 
-// Conexión a MongoDB (La URL viene del archivo .env)
-mongoose.connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-})
+// Conexión a MongoDB (CORREGIDO: Sin opciones obsoletas)
+mongoose.connect(process.env.MONGODB_URI)
 .then(() => console.log('✅ Conectado a MongoDB Atlas'))
 .catch(err => console.error('❌ Error de conexión a MongoDB:', err));
 
@@ -62,4 +59,5 @@ app.put('/api/pqrs/:id', async (req, res) => {
 // Iniciar servidor
 app.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+});
 });
