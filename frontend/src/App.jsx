@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 // --- CONFIGURACIÓN DEL SERVIDOR ---
-// Aquí conectamos con el cerebro que ya tienes funcionando en Render
+// Tu servidor real en Render
 const API_URL = 'https://empuvilla-api.onrender.com/api/pqrs';
 
 // --- BASE DE DATOS SIMULADA (SUSCRIPTORES) ---
@@ -38,8 +38,12 @@ const callGeminiAPI = async (prompt) => {
 };
 
 // --- COMPONENTES UI ---
-const Card = ({ children, className = "" }) => (
-  <div className={`bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden ${className}`}>
+// CORRECCIÓN APLICADA: Ahora Card acepta ...props (onClick, etc.)
+const Card = ({ children, className = "", ...props }) => (
+  <div 
+    className={`bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden ${className}`}
+    {...props}
+  >
     {children}
   </div>
 );
@@ -59,7 +63,7 @@ const Badge = ({ status }) => {
 export default function App() {
   const [role, setRole] = useState('guest'); 
   const [view, setView] = useState('home'); 
-  const [pqrs, setPqrs] = useState([]); // Aquí se guardan los datos que traemos de la nube
+  const [pqrs, setPqrs] = useState([]);
   const [notification, setNotification] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
@@ -81,7 +85,7 @@ export default function App() {
       }
     } catch (error) {
       console.error("Error de conexión:", error);
-      showNotification("No se pudo conectar con el servidor", "error");
+      // Opcional: No mostrar error visual al inicio si está vacío, solo en consola
     } finally {
       setLoadingData(false);
     }
@@ -103,7 +107,7 @@ export default function App() {
       
       if (response.ok) {
         const savedPQR = await response.json();
-        setPqrs([savedPQR, ...pqrs]); // Actualizamos la lista localmente para que se vea rápido
+        setPqrs([savedPQR, ...pqrs]); 
         showNotification(`Solicitud Radicada con Éxito: ${savedPQR.id}`, 'success');
         setView('home');
       } else {
@@ -117,7 +121,6 @@ export default function App() {
   // 3. ACTUALIZAR PQR (GESTIÓN)
   const handleUpdatePQR = async (updatedPQR) => {
     try {
-      // La ruta en el servidor es /api/pqrs/:id
       const response = await fetch(`${API_URL}/${updatedPQR.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -126,7 +129,6 @@ export default function App() {
 
       if (response.ok) {
         const result = await response.json();
-        // Actualizamos la lista local reemplazando la vieja por la nueva
         const updatedList = pqrs.map(p => p.id === result.id ? result : p);
         setPqrs(updatedList);
         showNotification('Gestión guardada y sincronizada correctamente', 'success');
@@ -142,7 +144,6 @@ export default function App() {
     setRole(userRole);
     setShowLogin(false);
     setView(userRole === 'manager' ? 'admin' : 'operations');
-    // Recargar datos al entrar para asegurar que tenemos lo último
     fetchPqrs(); 
     showNotification(`Bienvenido al panel de ${userRole === 'manager' ? 'Gerencia' : 'Operaciones'}`, 'success');
   };
