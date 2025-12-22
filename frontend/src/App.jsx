@@ -5,6 +5,10 @@ import {
   Sparkles, Download, BarChart3, CheckSquare, XCircle, User, Lock, Phone
 } from 'lucide-react';
 
+// --- CONFIGURACIÓN DEL SERVIDOR ---
+// Aquí conectamos con el cerebro que ya tienes funcionando en Render
+const API_URL = 'https://empuvilla-api.onrender.com/api/pqrs';
+
 // --- BASE DE DATOS SIMULADA (SUSCRIPTORES) ---
 const SUBSCRIBERS_DB = {
   '1001': { name: 'Juan Pérez', address: 'Calle 5 # 10-20', phone: '3101234567', neighborhood: 'Centro' },
@@ -15,7 +19,7 @@ const SUBSCRIBERS_DB = {
 
 // --- HELPER GEMINI API ---
 const callGeminiAPI = async (prompt) => {
-  const apiKey = ""; // La clave se inyecta en tiempo de ejecución
+  const apiKey = ""; // La clave se inyecta en tiempo de ejecución (si tienes una)
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
   try {
@@ -53,45 +57,93 @@ const Badge = ({ status }) => {
 
 // --- APP PRINCIPAL ---
 export default function App() {
-  // 'guest' (suscriptor), 'operator' (técnico), 'manager' (gerente)
   const [role, setRole] = useState('guest'); 
   const [view, setView] = useState('home'); 
-  const [pqrs, setPqrs] = useState([]);
+  const [pqrs, setPqrs] = useState([]); // Aquí se guardan los datos que traemos de la nube
   const [notification, setNotification] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
+  const [loadingData, setLoadingData] = useState(false);
 
-  // Cargar datos locales (Simulación de DB)
-  // NOTA: Para conectar con MongoDB, aquí se usaría fetch() en lugar de localStorage
+  // 1. CARGAR DATOS DESDE LA NUBE AL INICIAR
   useEffect(() => {
-    const saved = localStorage.getItem('empuvilla_pqrs_v3');
-    if (saved) setPqrs(JSON.parse(saved));
+    fetchPqrs();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('empuvilla_pqrs_v3', JSON.stringify(pqrs));
-  }, [pqrs]);
+  const fetchPqrs = async () => {
+    setLoadingData(true);
+    try {
+      const response = await fetch(API_URL);
+      if (response.ok) {
+        const data = await response.json();
+        setPqrs(data);
+      } else {
+        console.error("Error al cargar datos del servidor");
+      }
+    } catch (error) {
+      console.error("Error de conexión:", error);
+      showNotification("No se pudo conectar con el servidor", "error");
+    } finally {
+      setLoadingData(false);
+    }
+  };
 
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 4000);
   };
 
-  const handleCreatePQR = (newPQR) => {
-    setPqrs([newPQR, ...pqrs]);
-    showNotification(`Solicitud Radicada: ${newPQR.id}`, 'success');
-    setView('home');
+  // 2. CREAR PQR (ENVIAR A LA NUBE)
+  const handleCreatePQR = async (newPQR) => {
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPQR)
+      });
+      
+      if (response.ok) {
+        const savedPQR = await response.json();
+        setPqrs([savedPQR, ...pqrs]); // Actualizamos la lista localmente para que se vea rápido
+        showNotification(`Solicitud Radicada con Éxito: ${savedPQR.id}`, 'success');
+        setView('home');
+      } else {
+        showNotification("Error al guardar en la nube", "error");
+      }
+    } catch (error) {
+      showNotification("Error de conexión al guardar", "error");
+    }
   };
 
-  const handleUpdatePQR = (updatedPQR) => {
-    const updatedList = pqrs.map(p => p.id === updatedPQR.id ? updatedPQR : p);
-    setPqrs(updatedList);
-    showNotification('Gestión actualizada correctamente', 'success');
+  // 3. ACTUALIZAR PQR (GESTIÓN)
+  const handleUpdatePQR = async (updatedPQR) => {
+    try {
+      // La ruta en el servidor es /api/pqrs/:id
+      const response = await fetch(`${API_URL}/${updatedPQR.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedPQR)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Actualizamos la lista local reemplazando la vieja por la nueva
+        const updatedList = pqrs.map(p => p.id === result.id ? result : p);
+        setPqrs(updatedList);
+        showNotification('Gestión guardada y sincronizada correctamente', 'success');
+      } else {
+        showNotification("Error al actualizar en la nube", "error");
+      }
+    } catch (error) {
+      showNotification("Error de conexión al actualizar", "error");
+    }
   };
 
   const handleLogin = (userRole) => {
     setRole(userRole);
     setShowLogin(false);
     setView(userRole === 'manager' ? 'admin' : 'operations');
+    // Recargar datos al entrar para asegurar que tenemos lo último
+    fetchPqrs(); 
     showNotification(`Bienvenido al panel de ${userRole === 'manager' ? 'Gerencia' : 'Operaciones'}`, 'success');
   };
 
@@ -161,6 +213,10 @@ export default function App() {
 
       {/* CONTENIDO PRINCIPAL */}
       <main className="max-w-7xl mx-auto px-4 py-8 flex-grow w-full">
+        {loadingData && pqrs.length === 0 && (
+           <div className="text-center py-4 text-blue-600 animate-pulse">Conectando con el servidor...</div>
+        )}
+
         {role === 'guest' && view === 'home' && <HomeView setView={setView} setShowLogin={setShowLogin} />}
         {role === 'guest' && view === 'create' && <CreatePQRForm onCreate={handleCreatePQR} onCancel={() => setView('home')} />}
         {role === 'guest' && view === 'search' && <SearchPQR pqrs={pqrs} />}
@@ -559,6 +615,7 @@ function OperationalPanel({ pqrs, onUpdate }) {
     const finalStatus = isAbsent ? 'Cerrada' : status;
     const finalNote = isAbsent ? `VISITA FALLIDA: ${note} (Ausente)` : `${note} | Atendido por: ${personPresent}`;
     
+    // Al actualizar, necesitamos enviar el ID para que la URL del fetch sea correcta
     onUpdate({
       ...selected, 
       status: finalStatus,
