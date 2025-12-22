@@ -9,13 +9,15 @@ import {
 // Tu servidor real en Render
 const API_URL = 'https://empuvilla-api.onrender.com/api/pqrs';
 
+
+
+
 // --- BASE DE DATOS SIMULADA (SUSCRIPTORES) ---
-const SUBSCRIBERS_DB = {
-  '1001': { name: 'Juan Pérez', address: 'Calle 5 # 10-20', phone: '3101234567', neighborhood: 'Centro' },
-  '1002': { name: 'María Rodríguez', address: 'Carrera 8 # 15-40', phone: '3129876543', neighborhood: 'La Paz' },
-  '1003': { name: 'Conjunto Res. Los Alamos', address: 'Av. Principal # 20-00', phone: '6025551234', neighborhood: 'Norte' },
-  '1004': { name: 'Carlos Daza', address: 'Calle 12 # 4-05', phone: '3005558888', neighborhood: 'El Jardín' },
-};
+import { SUBSCRIBERS_DB } from './data/subscribers';
+
+
+
+
 
 // --- HELPER GEMINI API ---
 const callGeminiAPI = async (prompt) => {
