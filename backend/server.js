@@ -11,7 +11,19 @@ const PORT = process.env.PORT || 5000;
 app.use(cors()); // Permite conexiones desde el Frontend
 app.use(express.json()); // Permite recibir JSON
 
-// Conexión a MongoDB (CORREGIDO: Sin opciones obsoletas)
+// --- RUTA DE BIENVENIDA ---
+// Esto es lo que verás al abrir el link principal
+app.get('/', (req, res) => {
+    res.send(`
+        <div style="font-family: sans-serif; text-align: center; padding: 50px;">
+            <h1 style="color: #1e3a8a;">EMPUVILLA S.A. E.S.P.</h1>
+            <p style="font-size: 1.2rem;">✅ El servidor está conectado y funcionando correctamente.</p>
+        </div>
+    `);
+});
+
+// Conexión a MongoDB
+// (Sin opciones antiguas que causan error)
 mongoose.connect(process.env.MONGODB_URI)
 .then(() => console.log('✅ Conectado a MongoDB Atlas'))
 .catch(err => console.error('❌ Error de conexión a MongoDB:', err));
@@ -24,7 +36,7 @@ const Pqr = require('./models/PqrModel');
 // 1. Obtener todas las PQR
 app.get('/api/pqrs', async (req, res) => {
     try {
-        const pqrs = await Pqr.find().sort({ date: -1 }); // Las más recientes primero
+        const pqrs = await Pqr.find().sort({ date: -1 });
         res.json(pqrs);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -42,7 +54,7 @@ app.post('/api/pqrs', async (req, res) => {
     }
 });
 
-// 3. Actualizar PQR (Gestión operativa)
+// 3. Actualizar PQR
 app.put('/api/pqrs/:id', async (req, res) => {
     try {
         const updatedPqr = await Pqr.findOneAndUpdate(
@@ -59,5 +71,4 @@ app.put('/api/pqrs/:id', async (req, res) => {
 // Iniciar servidor
 app.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-});
 });
