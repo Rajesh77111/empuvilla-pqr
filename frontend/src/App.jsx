@@ -234,7 +234,8 @@ export default function App() {
 
       <footer className="bg-slate-100 border-t border-slate-200 py-8 text-center text-slate-500 text-sm">
         <p className="font-semibold text-slate-700">EMPUVILLA S.A. E.S.P.</p>
-        <p>Vigilado Superservicios - Villa Rica, Cauca</p>
+        <p>Vigilado Superservicios - Villa Rica, Cauca</p> 
+        <p>Desarrollado por Multivela Studio</p>
       </footer>
     </div>
   );
