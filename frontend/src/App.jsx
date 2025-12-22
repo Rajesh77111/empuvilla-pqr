@@ -161,7 +161,13 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('home')}>
             <div className="bg-white p-1.5 rounded-lg">
-              <div className="w-8 h-8 flex items-center justify-center text-blue-900 font-black text-xl border-2 border-blue-900 rounded">E</div>
+              <div className="bg-white p-1 rounded-lg">
+  <img 
+    src="/logo.jpg" 
+    alt="Logo EMPUVILLA" 
+    className="h-10 w-auto object-contain" 
+  />
+</div>
             </div>
             <div>
               <h1 className="text-lg md:text-xl font-bold tracking-tight leading-none">EMPUVILLA S.A. E.S.P.</h1>
