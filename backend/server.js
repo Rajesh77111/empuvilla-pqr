@@ -8,11 +8,10 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors()); // Permite conexiones desde el Frontend
-app.use(express.json()); // Permite recibir JSON
+app.use(cors()); 
+app.use(express.json()); 
 
 // --- RUTA DE BIENVENIDA ---
-// Esto es lo que verás al abrir el link principal
 app.get('/', (req, res) => {
     res.send(`
         <div style="font-family: sans-serif; text-align: center; padding: 50px;">
@@ -23,7 +22,6 @@ app.get('/', (req, res) => {
 });
 
 // Conexión a MongoDB
-// (Sin opciones antiguas que causan error)
 mongoose.connect(process.env.MONGODB_URI)
 .then(() => console.log('✅ Conectado a MongoDB Atlas'))
 .catch(err => console.error('❌ Error de conexión a MongoDB:', err));
@@ -65,6 +63,21 @@ app.put('/api/pqrs/:id', async (req, res) => {
         res.json(updatedPqr);
     } catch (err) {
         res.status(400).json({ error: err.message });
+    }
+});
+
+// 4. ELIMINAR PQR (NUEVA FUNCIÓN AGREGADA)
+// Sin esto, el servidor rechaza la orden de borrar
+app.delete('/api/pqrs/:id', async (req, res) => {
+    try {
+        const deleted = await Pqr.findOneAndDelete({ id: req.params.id });
+        if (deleted) {
+            res.json({ message: 'PQR Eliminada correctamente' });
+        } else {
+            res.status(404).json({ message: 'PQR no encontrada' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
