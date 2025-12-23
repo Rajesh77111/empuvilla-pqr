@@ -158,7 +158,7 @@ export default function App() {
             {/* LOGO */}
             <div className="bg-white p-1 rounded-lg">
               <img 
-                src="/logo.jpg" 
+                src="/logoEMPUVILLA.png" 
                 alt="Logo EMPUVILLA" 
                 className="h-10 w-auto object-contain" 
               />
