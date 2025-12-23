@@ -184,7 +184,7 @@ export default function App() {
             {/* LOGO */}
             <div className="bg-white p-1 rounded-lg">
               <img 
-                src="/logoEMPUVILLA.png" 
+                src="/logo.jpg" 
                 alt="Logo EMPUVILLA" 
                 className="h-10 w-auto object-contain" 
               />
@@ -596,15 +596,90 @@ function AdminDashboard({ pqrs, role, onDelete }) {
   const pendientes = pqrs.filter(p => p.status === 'Radicada' || p.status === 'En Proceso').length;
   const efectividad = total > 0 ? Math.round((resueltas/total)*100) : 0;
 
-  const exportCSV = () => {
-    const headers = ["ID,Fecha,Servicio,Estado,Responsable"];
-    const rows = pqrs.map(p => `${p.id},${new Date(p.date).toLocaleDateString()},${p.service},${p.status},${p.lastResponsible||''}`);
-    const csvContent = "data:text/csv;charset=utf-8," + headers.concat(rows).join("\n");
+  // --- NUEVA FUNCIÓN DE EXPORTACIÓN EXCEL CON ESTILOS ---
+  const exportExcel = () => {
+    // 1. Datos para el reporte
+    const dateStr = new Date().toLocaleDateString();
+    
+    // 2. Estilos CSS para Excel (Excel interpreta HTML básico)
+    const tableStyle = `
+      <style>
+        .header { background-color: #1e3a8a; color: white; font-weight: bold; text-align: center; border: 1px solid #000; }
+        .row { border: 1px solid #ccc; text-align: left; }
+        .title { font-size: 18px; font-weight: bold; text-align: center; background-color: #facc15; color: #1e3a8a; border: 1px solid #000; }
+        .meta { font-weight: bold; background-color: #f3f4f6; border: 1px solid #000; }
+      </style>
+    `;
+
+    // 3. Construcción de la Tabla HTML
+    let html = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
+        <!--[if gte mso 9]>
+        <xml>
+        <x:ExcelWorkbook>
+          <x:ExcelWorksheets>
+            <x:ExcelWorksheet>
+              <x:Name>Reporte PQR</x:Name>
+              <x:WorksheetOptions>
+                <x:DisplayGridlines/>
+              </x:WorksheetOptions>
+            </x:ExcelWorksheet>
+          </x:ExcelWorksheets>
+        </x:ExcelWorkbook>
+        </xml>
+        <![endif]-->
+        ${tableStyle}
+      </head>
+      <body>
+        <table>
+          <tr>
+            <td colspan="6" class="title" height="40">REPORTE DE GESTIÓN DE PQR - EMPUVILLA S.A. E.S.P.</td>
+          </tr>
+          <tr>
+            <td colspan="6" class="meta">Fecha de Generación: ${dateStr}</td>
+          </tr>
+          <tr></tr>
+          <tr>
+            <th class="header">ID PQR</th>
+            <th class="header">Fecha Radicación</th>
+            <th class="header">Servicio</th>
+            <th class="header">Suscriptor</th>
+            <th class="header">Responsable</th>
+            <th class="header">Estado</th>
+          </tr>
+    `;
+
+    // 4. Agregar filas de datos
+    pqrs.forEach(p => {
+      html += `
+        <tr>
+          <td class="row">${p.id}</td>
+          <td class="row">${new Date(p.date).toLocaleDateString()}</td>
+          <td class="row">${p.service}</td>
+          <td class="row">${p.name}</td>
+          <td class="row">${p.lastResponsible || 'Sin asignar'}</td>
+          <td class="row">${p.status}</td>
+        </tr>
+      `;
+    });
+
+    html += `
+        </table>
+      </body>
+      </html>
+    `;
+
+    // 5. Crear Blob y descargar
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodeURI(csvContent));
-    link.setAttribute("download", "reporte_pqrs.csv");
+    link.href = url;
+    link.download = `Reporte_Empuvilla_${new Date().toISOString().slice(0,10)}.xls`;
     document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -613,7 +688,10 @@ function AdminDashboard({ pqrs, role, onDelete }) {
          <h2 className="text-2xl font-bold text-slate-800">
            {role === 'admin' ? 'Panel de Administración (Superusuario)' : 'Panel Gerencial'}
          </h2>
-         <button onClick={exportCSV} className="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 flex items-center gap-2 text-sm font-bold"><Download size={16}/> Exportar Excel</button>
+         {/* BOTÓN ACTUALIZADO PARA EXPORTAR EXCEL ELEGANTE */}
+         <button onClick={exportExcel} className="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 flex items-center gap-2 text-sm font-bold">
+           <Download size={16}/> Descargar Reporte Excel
+         </button>
        </div>
        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-4 border-l-4 border-blue-500"><div className="text-xs uppercase font-bold text-slate-500">Total</div><div className="text-3xl font-black text-blue-900">{total}</div></Card>
