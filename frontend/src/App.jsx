@@ -2,26 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { 
   FileText, Search, Menu, LogIn, LogOut, Shield, 
   MapPin, CheckCircle, AlertTriangle, Droplets, RefreshCw, Trash2, 
-  Sparkles, Download, BarChart3, CheckSquare, XCircle, User, Lock, Phone
+  Sparkles, Download, BarChart3, CheckSquare, XCircle, User, Lock, Phone,
+  HardHat // Icono para operarios
 } from 'lucide-react';
 
-// --- CONFIGURACIÓN DEL SERVIDOR ---
-// Tu servidor real en Render
-const API_URL = 'https://empuvilla-api.onrender.com/api/pqrs';
-
-
-
-
-// --- BASE DE DATOS SIMULADA (SUSCRIPTORES) ---
+// --- IMPORTAR BASE DE DATOS EXTERNA ---
+// Esta línea conecta con el archivo subscribers.js en la carpeta src/data
 import { SUBSCRIBERS_DB } from './data/subscribers';
 
+// --- CONFIGURACIÓN DEL SERVIDOR ---
+const API_URL = 'https://empuvilla-api.onrender.com/api/pqrs';
 
-
-
+// --- LISTA DE OPERARIOS ---
+const OPERATORS_LIST = ['Rosa', 'Hernan', 'Arnoldo', 'Jaiver'];
 
 // --- HELPER GEMINI API ---
 const callGeminiAPI = async (prompt) => {
-  const apiKey = ""; // La clave se inyecta en tiempo de ejecución (si tienes una)
+  const apiKey = ""; 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
   try {
@@ -40,7 +37,6 @@ const callGeminiAPI = async (prompt) => {
 };
 
 // --- COMPONENTES UI ---
-// CORRECCIÓN APLICADA: Ahora Card acepta ...props (onClick, etc.)
 const Card = ({ children, className = "", ...props }) => (
   <div 
     className={`bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden ${className}`}
@@ -70,7 +66,6 @@ export default function App() {
   const [showLogin, setShowLogin] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
 
-  // 1. CARGAR DATOS DESDE LA NUBE AL INICIAR
   useEffect(() => {
     fetchPqrs();
   }, []);
@@ -87,7 +82,6 @@ export default function App() {
       }
     } catch (error) {
       console.error("Error de conexión:", error);
-      // Opcional: No mostrar error visual al inicio si está vacío, solo en consola
     } finally {
       setLoadingData(false);
     }
@@ -98,7 +92,6 @@ export default function App() {
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // 2. CREAR PQR (ENVIAR A LA NUBE)
   const handleCreatePQR = async (newPQR) => {
     try {
       const response = await fetch(API_URL, {
@@ -120,7 +113,6 @@ export default function App() {
     }
   };
 
-  // 3. ACTUALIZAR PQR (GESTIÓN)
   const handleUpdatePQR = async (updatedPQR) => {
     try {
       const response = await fetch(`${API_URL}/${updatedPQR.id}`, {
@@ -162,15 +154,16 @@ export default function App() {
       <header className="bg-blue-900 text-white shadow-lg sticky top-0 z-50 border-b-4 border-yellow-400">
         <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('home')}>
-            <div className="bg-white p-1.5 rounded-lg">
-              <div className="bg-white p-1 rounded-lg">
-  <img 
-    src="/logoEMPUVILLA.png" 
-    alt="Logo EMPUVILLA" 
-    className="h-10 w-auto object-contain" 
-  />
-</div>
+            
+            {/* LOGO */}
+            <div className="bg-white p-1 rounded-lg">
+              <img 
+                src="/logo.jpg" 
+                alt="Logo EMPUVILLA" 
+                className="h-10 w-auto object-contain" 
+              />
             </div>
+
             <div>
               <h1 className="text-lg md:text-xl font-bold tracking-tight leading-none">EMPUVILLA S.A. E.S.P.</h1>
               <p className="text-xs text-blue-200 font-light">Gestión de Servicios Públicos</p>
@@ -236,8 +229,10 @@ export default function App() {
 
       <footer className="bg-slate-100 border-t border-slate-200 py-8 text-center text-slate-500 text-sm">
         <p className="font-semibold text-slate-700">EMPUVILLA S.A. E.S.P.</p>
-        <p>Vigilado Superservicios - Villa Rica, Cauca</p> 
-        <p>Desarrollado por Multivela Studio</p>
+        <p>Vigilado Superservicios - Villa Rica, Cauca</p>
+        <p className="mt-4 text-xs text-slate-400 font-light">
+          Software desarrollado por <strong>Multivela Studio</strong>
+        </p>
       </footer>
     </div>
   );
@@ -361,7 +356,7 @@ function CreatePQRForm({ onCreate, onCancel }) {
     setTimeout(() => {
       const data = SUBSCRIBERS_DB[subscriberCode];
       if (data) { setSubscriberData(data); setFormData(prev => ({ ...prev, phone: data.phone })); setStep(2); }
-      else { alert("Código no encontrado. Pruebe 1001, 1002, 1003 o 1004."); }
+      else { alert("Código no encontrado. Verifique su factura."); }
       setLoading(false);
     }, 800);
   };
@@ -373,32 +368,22 @@ function CreatePQRForm({ onCreate, onCancel }) {
     setAiImproving(false);
   };
 
- const handleSubmit = (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!paymentStatus) return alert("Indique estado de pago.");
     
-    // --- PASO 1: GENERAR ID ÚNICO Y PROFESIONAL ---
+    // --- GENERACIÓN DE ID PROFESIONAL ---
     const now = new Date();
-    
-    // Formato de Fecha: 20251024 (AñoMesDía)
     const fecha = now.toISOString().slice(0,10).replace(/-/g, '');
-    
-    // Formato de Hora: 1430 (HoraMinuto)
     const hora = now.toTimeString().slice(0,5).replace(/:/g, '');
-    
-    // Aleatorio de seguridad (00 al 99) para evitar duplicados en el mismo minuto
     const aleatorio = Math.floor(Math.random() * 100).toString().padStart(2, '0');
-    
-    // Resultado Final: PQR-20251024-143099
     const nuevoID = `PQR-${fecha}-${hora}${aleatorio}`;
-    // ----------------------------------------------
 
-    // --- PASO 2: CREAR EL PAQUETE DE DATOS (newPQR) ---
     const newPQR = {
-      id: nuevoID, // <--- Aquí asignamos el ID que acabamos de crear
+      id: nuevoID,
       subscriberCode,
-      ...subscriberData, // Nombre, dirección base, barrio...
-      ...formData,       // Lo que escribió el usuario (descripción, teléfono...)
+      ...subscriberData,
+      ...formData,
       fullAddress: `${subscriberData.address} ${formData.addressDetails || ''}`,
       paymentStatus: paymentStatus === 'yes' ? 'Al día' : 'En Mora',
       wantsAgreement,
@@ -406,10 +391,9 @@ function CreatePQRForm({ onCreate, onCancel }) {
       status: 'Radicada',
       history: [{ date: new Date().toISOString(), action: 'Radicación', user: 'Web' }]
     };
-    
-    // --- PASO 3: ENVIAR ---
     onCreate(newPQR);
   };
+
   return (
     <Card className="max-w-3xl mx-auto">
       <div className="bg-blue-900 text-white p-4 font-bold flex justify-between items-center">
@@ -622,15 +606,25 @@ function AdminDashboard({ pqrs }) {
 }
 
 // --- PANEL OPERATIVO (OPERATOR) ---
+// CORRECCIÓN: Se agrega selección de Operario Responsable
 function OperationalPanel({ pqrs, onUpdate }) {
   const [selected, setSelected] = useState(null);
   const [note, setNote] = useState('');
   const [status, setStatus] = useState('');
+  const [operator, setOperator] = useState(''); // Nuevo estado para el operario
   const [aiGenerating, setAiGenerating] = useState(false);
   const [personPresent, setPersonPresent] = useState('Titular');
 
   const pendingList = pqrs.filter(p => p.status !== 'Resuelta' && p.status !== 'Cerrada' && p.status !== 'Rechazada');
   
+  const handleSelectPQR = (pqr) => {
+      setSelected(pqr);
+      setStatus(pqr.status);
+      setOperator(''); // Reset al cambiar de PQR
+      setNote('');
+      setPersonPresent('Titular');
+  };
+
   const handleAiGenerate = async () => {
     setAiGenerating(true);
     const report = await callGeminiAPI(`Genera reporte técnico breve: Problema "${selected.description}" en servicio ${selected.service}. Acción: Inspección y reparación.`);
@@ -639,22 +633,23 @@ function OperationalPanel({ pqrs, onUpdate }) {
   };
 
   const handleSave = () => {
-    if(!status || !note) return alert("Complete estado y nota técnica");
+    if(!status || !note || !operator) return alert("Complete estado, operario y nota técnica"); // Validación de operario
+    
     const isAbsent = personPresent === 'Ausente';
     const finalStatus = isAbsent ? 'Cerrada' : status;
     const finalNote = isAbsent ? `VISITA FALLIDA: ${note} (Ausente)` : `${note} | Atendido por: ${personPresent}`;
     
-    // Al actualizar, necesitamos enviar el ID para que la URL del fetch sea correcta
     onUpdate({
       ...selected, 
       status: finalStatus,
-      lastResponsible: 'Operaciones',
+      lastResponsible: operator, // Se guarda el nombre del operario seleccionado
       attendedInAbsence: isAbsent,
-      history: [...selected.history, {date: new Date().toISOString(), action: `Estado: ${finalStatus}`, user: 'Operaciones', note: finalNote}]
+      history: [...selected.history, {date: new Date().toISOString(), action: `Estado: ${finalStatus}`, user: operator, note: finalNote}]
     });
     setSelected(null);
     setNote('');
     setStatus('');
+    setOperator('');
   };
 
   return (
@@ -667,7 +662,7 @@ function OperationalPanel({ pqrs, onUpdate }) {
         <div className="overflow-y-auto flex-1 p-2 space-y-2 bg-slate-50/50">
           {pendingList.length === 0 && <div className="text-center p-4 text-slate-400 text-sm">No hay solicitudes pendientes</div>}
           {pendingList.map(p=>(
-            <div key={p.id} onClick={()=>{setSelected(p); setStatus(p.status);}} className={`p-3 rounded-lg border cursor-pointer hover:bg-blue-50 transition-colors text-sm bg-white ${selected?.id===p.id?'border-blue-500 ring-1 ring-blue-500':''}`}>
+            <div key={p.id} onClick={() => handleSelectPQR(p)} className={`p-3 rounded-lg border cursor-pointer hover:bg-blue-50 transition-colors text-sm bg-white ${selected?.id===p.id?'border-blue-500 ring-1 ring-blue-500':''}`}>
               <div className="font-bold flex justify-between text-blue-900"><span>{p.id}</span><span className="text-xs font-normal text-slate-500">{new Date(p.date).toLocaleDateString()}</span></div>
               <div className="flex gap-2 mt-1"><Badge status={p.status}/><span className="text-xs bg-slate-100 px-2 rounded border">{p.service}</span></div>
             </div>
@@ -702,14 +697,22 @@ function OperationalPanel({ pqrs, onUpdate }) {
                    </select>
                  </div>
                  <div>
-                   <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Atendido por</label>
-                   <select className="w-full border p-2 rounded text-sm" onChange={e=>setPersonPresent(e.target.value)} value={personPresent}>
+                   <label className="block text-xs font-bold uppercase text-slate-500 mb-1 flex items-center gap-1"><HardHat size={12}/> Operario Responsable</label>
+                   <select className="w-full border p-2 rounded text-sm bg-yellow-50 font-medium" onChange={e=>setOperator(e.target.value)} value={operator}>
+                      <option value="">-- Seleccionar --</option>
+                      {OPERATORS_LIST.map(op => <option key={op} value={op}>{op}</option>)}
+                   </select>
+                 </div>
+               </div>
+
+               <div>
+                   <label className="block text-xs font-bold uppercase text-slate-500 mb-1">¿Quién atiende la visita?</label>
+                   <select className="w-full border p-2 rounded text-sm mb-4" onChange={e=>setPersonPresent(e.target.value)} value={personPresent}>
                       <option value="Titular">Titular</option>
                       <option value="Familiar">Familiar</option>
                       <option value="Vecino">Vecino</option>
                       <option value="Ausente">NADIE (Ausente)</option>
                    </select>
-                 </div>
                </div>
 
                <div>
