@@ -373,28 +373,32 @@ function CreatePQRForm({ onCreate, onCancel }) {
     setAiImproving(false);
   };
 
-  const handleSubmit = (e) => {
+ const handleSubmit = (e) => {
     e.preventDefault();
     if (!paymentStatus) return alert("Indique estado de pago.");
-
-    // --- GENERACIÓN DE ID PROFESIONAL ---
+    
+    // --- PASO 1: GENERAR ID ÚNICO Y PROFESIONAL ---
     const now = new Date();
-    // 1. Obtiene la fecha: 20251024
+    
+    // Formato de Fecha: 20251024 (AñoMesDía)
     const fecha = now.toISOString().slice(0,10).replace(/-/g, '');
-    // 2. Obtiene la hora: 1430 (2:30 PM)
+    
+    // Formato de Hora: 1430 (HoraMinuto)
     const hora = now.toTimeString().slice(0,5).replace(/:/g, '');
-    // 3. Agrega 2 números al azar (00-99) por seguridad
+    
+    // Aleatorio de seguridad (00 al 99) para evitar duplicados en el mismo minuto
     const aleatorio = Math.floor(Math.random() * 100).toString().padStart(2, '0');
     
-    // Une todo: PQR-20251024-143099
+    // Resultado Final: PQR-20251024-143099
     const nuevoID = `PQR-${fecha}-${hora}${aleatorio}`;
-    // ------------------------------------
-    
+    // ----------------------------------------------
+
+    // --- PASO 2: CREAR EL PAQUETE DE DATOS (newPQR) ---
     const newPQR = {
-      id: `nuevoID-${Date.now().toString().slice(-6)}`,
+      id: nuevoID, // <--- Aquí asignamos el ID que acabamos de crear
       subscriberCode,
-      ...subscriberData,
-      ...formData,
+      ...subscriberData, // Nombre, dirección base, barrio...
+      ...formData,       // Lo que escribió el usuario (descripción, teléfono...)
       fullAddress: `${subscriberData.address} ${formData.addressDetails || ''}`,
       paymentStatus: paymentStatus === 'yes' ? 'Al día' : 'En Mora',
       wantsAgreement,
@@ -402,9 +406,10 @@ function CreatePQRForm({ onCreate, onCancel }) {
       status: 'Radicada',
       history: [{ date: new Date().toISOString(), action: 'Radicación', user: 'Web' }]
     };
+    
+    // --- PASO 3: ENVIAR ---
     onCreate(newPQR);
   };
-
   return (
     <Card className="max-w-3xl mx-auto">
       <div className="bg-blue-900 text-white p-4 font-bold flex justify-between items-center">
