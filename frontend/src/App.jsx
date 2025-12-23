@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 // --- IMPORTAR BASE DE DATOS EXTERNA ---
-// Esta línea conecta con el archivo subscribers.js en la carpeta src/data
+// Asegúrate de que el archivo subscribers.js esté en la carpeta src/data
 import { SUBSCRIBERS_DB } from './data/subscribers';
 
 // --- CONFIGURACIÓN DEL SERVIDOR ---
@@ -18,7 +18,7 @@ const OPERATORS_LIST = ['Rosa', 'Hernan', 'Arnoldo', 'Jaiver'];
 
 // --- HELPER GEMINI API ---
 const callGeminiAPI = async (prompt) => {
-  const apiKey = ""; 
+  const apiKey = ""; // La clave se inyecta en tiempo de ejecución
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
   try {
@@ -134,12 +134,38 @@ export default function App() {
     }
   };
 
+  const handleDeletePQR = async (id) => {
+    if (!window.confirm("¿ESTÁ SEGURO? Esta acción eliminará la PQR permanentemente.")) return;
+
+    try {
+      const response = await fetch(`${API_URL}/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        const updatedList = pqrs.filter(p => p.id !== id);
+        setPqrs(updatedList);
+        showNotification('PQR Eliminada del sistema', 'success');
+      } else {
+        showNotification("Error al eliminar", "error");
+      }
+    } catch (error) {
+      showNotification("Error de conexión al eliminar", "error");
+    }
+  };
+
   const handleLogin = (userRole) => {
     setRole(userRole);
     setShowLogin(false);
-    setView(userRole === 'manager' ? 'admin' : 'operations');
+    setView(userRole === 'manager' || userRole === 'admin' ? 'admin' : 'operations');
     fetchPqrs(); 
-    showNotification(`Bienvenido al panel de ${userRole === 'manager' ? 'Gerencia' : 'Operaciones'}`, 'success');
+    
+    let welcomeMsg = "Bienvenido";
+    if(userRole === 'manager') welcomeMsg = "Bienvenido Gerencia";
+    if(userRole === 'operator') welcomeMsg = "Bienvenido Operaciones";
+    if(userRole === 'admin') welcomeMsg = "Bienvenido Administrador (Superusuario)";
+    
+    showNotification(welcomeMsg, 'success');
   };
 
   const handleLogout = () => {
@@ -158,7 +184,7 @@ export default function App() {
             {/* LOGO */}
             <div className="bg-white p-1 rounded-lg">
               <img 
-                src="/logoEMPUVILLA.png" 
+                src="/logo.jpg" 
                 alt="Logo EMPUVILLA" 
                 className="h-10 w-auto object-contain" 
               />
@@ -184,8 +210,8 @@ export default function App() {
             
             {role !== 'guest' && (
               <>
-                <span className="text-xs bg-yellow-500 text-blue-900 font-bold px-2 py-1 rounded mr-2">
-                  {role === 'manager' ? 'GERENCIA' : 'OPERACIONES'}
+                <span className={`text-xs font-bold px-2 py-1 rounded mr-2 ${role === 'admin' ? 'bg-red-500 text-white' : 'bg-yellow-500 text-blue-900'}`}>
+                  {role === 'manager' ? 'GERENCIA' : role === 'operator' ? 'OPERACIONES' : 'ADMIN / DEV'}
                 </span>
                 <button onClick={handleLogout} className="text-xs bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded flex items-center gap-1">
                   <LogOut size={12}/> Salir
@@ -223,7 +249,7 @@ export default function App() {
         {role === 'guest' && view === 'create' && <CreatePQRForm onCreate={handleCreatePQR} onCancel={() => setView('home')} />}
         {role === 'guest' && view === 'search' && <SearchPQR pqrs={pqrs} />}
         
-        {role === 'manager' && <AdminDashboard pqrs={pqrs} />}
+        {(role === 'manager' || role === 'admin') && <AdminDashboard pqrs={pqrs} role={role} onDelete={handleDeletePQR} />}
         {role === 'operator' && <OperationalPanel pqrs={pqrs} onUpdate={handleUpdatePQR} />}
       </main>
 
@@ -259,6 +285,8 @@ function LoginModal({ onLogin, onClose }) {
       onLogin('operator');
     } else if (user === 'gerente' && pass === 'admin2025') {
       onLogin('manager');
+    } else if (user === 'admin' && pass === 'master2025') { 
+      onLogin('admin');
     } else {
       setError('Credenciales incorrectas');
     }
@@ -290,9 +318,9 @@ function LoginModal({ onLogin, onClose }) {
         <button type="button" onClick={onClose} className="w-full text-slate-500 py-2 text-sm hover:underline">Cancelar</button>
       </form>
       <div className="mt-4 text-xs text-center text-slate-400 bg-slate-50 p-2 rounded border border-dashed">
-         <p><strong>Demo Login:</strong></p>
-         <p>Operario: operario / empuvilla2025</p>
-         <p>Gerente: gerente / admin2025</p>
+         <p><strong>Operario:</strong> operario / empuvilla2025</p>
+         <p><strong>Gerente:</strong> gerente / admin2025</p>
+         <p className="text-red-500 font-bold"><strong>Admin:</strong> admin / master2025</p>
       </div>
     </div>
   );
@@ -377,6 +405,7 @@ function CreatePQRForm({ onCreate, onCancel }) {
     const fecha = now.toISOString().slice(0,10).replace(/-/g, '');
     const hora = now.toTimeString().slice(0,5).replace(/:/g, '');
     const aleatorio = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+    
     const nuevoID = `PQR-${fecha}-${hora}${aleatorio}`;
 
     const newPQR = {
@@ -560,8 +589,8 @@ function SearchPQR({ pqrs }) {
   );
 }
 
-// --- PANEL GERENCIAL (MANAGER) ---
-function AdminDashboard({ pqrs }) {
+// --- PANEL GERENCIAL (MANAGER & ADMIN) ---
+function AdminDashboard({ pqrs, role, onDelete }) {
   const total = pqrs.length;
   const resueltas = pqrs.filter(p => p.status === 'Resuelta').length;
   const pendientes = pqrs.filter(p => p.status === 'Radicada' || p.status === 'En Proceso').length;
@@ -581,7 +610,9 @@ function AdminDashboard({ pqrs }) {
   return (
     <div className="space-y-6">
        <div className="flex justify-between items-center">
-         <h2 className="text-2xl font-bold text-slate-800">Panel Gerencial</h2>
+         <h2 className="text-2xl font-bold text-slate-800">
+           {role === 'admin' ? 'Panel de Administración (Superusuario)' : 'Panel Gerencial'}
+         </h2>
          <button onClick={exportCSV} className="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 flex items-center gap-2 text-sm font-bold"><Download size={16}/> Exportar Excel</button>
        </div>
        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -594,9 +625,35 @@ function AdminDashboard({ pqrs }) {
          <h3 className="font-bold mb-4 flex items-center gap-2 text-slate-700"><BarChart3 size={20}/> Listado General de Solicitudes</h3>
          <div className="overflow-x-auto">
            <table className="w-full text-sm text-left">
-             <thead className="bg-slate-100 font-bold text-slate-600 uppercase text-xs"><tr><th className="p-3">ID</th><th className="p-3">Fecha</th><th className="p-3">Servicio</th><th className="p-3">Suscriptor</th><th className="p-3">Estado</th></tr></thead>
+             <thead className="bg-slate-100 font-bold text-slate-600 uppercase text-xs">
+               <tr>
+                 <th className="p-3">ID</th>
+                 <th className="p-3">Fecha</th>
+                 <th className="p-3">Servicio</th>
+                 <th className="p-3">Suscriptor</th>
+                 <th className="p-3">Responsable</th>
+                 <th className="p-3">Estado</th>
+                 {role === 'admin' && <th className="p-3 text-center">Acciones</th>}
+               </tr>
+             </thead>
              <tbody className="divide-y">
-               {pqrs.map(p=>(<tr key={p.id} className="hover:bg-slate-50"><td className="p-3 font-bold text-blue-900">{p.id}</td><td className="p-3">{new Date(p.date).toLocaleDateString()}</td><td className="p-3">{p.service}</td><td className="p-3">{p.name}</td><td className="p-3"><Badge status={p.status}/></td></tr>))}
+               {pqrs.map(p=>(
+                 <tr key={p.id} className="hover:bg-slate-50">
+                   <td className="p-3 font-bold text-blue-900">{p.id}</td>
+                   <td className="p-3">{new Date(p.date).toLocaleDateString()}</td>
+                   <td className="p-3">{p.service}</td>
+                   <td className="p-3">{p.name}</td>
+                   <td className="p-3 font-medium text-slate-700">{p.lastResponsible || <span className="text-slate-400 italic">--</span>}</td>
+                   <td className="p-3"><Badge status={p.status}/></td>
+                   {role === 'admin' && (
+                     <td className="p-3 text-center">
+                       <button onClick={() => onDelete(p.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-full transition-colors" title="Eliminar definitivamente">
+                         <Trash2 size={18} />
+                       </button>
+                     </td>
+                   )}
+                 </tr>
+               ))}
              </tbody>
            </table>
          </div>
@@ -606,7 +663,6 @@ function AdminDashboard({ pqrs }) {
 }
 
 // --- PANEL OPERATIVO (OPERATOR) ---
-// CORRECCIÓN: Se agrega selección de Operario Responsable
 function OperationalPanel({ pqrs, onUpdate }) {
   const [selected, setSelected] = useState(null);
   const [note, setNote] = useState('');
