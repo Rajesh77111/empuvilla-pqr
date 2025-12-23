@@ -376,8 +376,22 @@ function CreatePQRForm({ onCreate, onCancel }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!paymentStatus) return alert("Indique estado de pago.");
+
+    // --- GENERACIÓN DE ID PROFESIONAL ---
+    const now = new Date();
+    // 1. Obtiene la fecha: 20251024
+    const fecha = now.toISOString().slice(0,10).replace(/-/g, '');
+    // 2. Obtiene la hora: 1430 (2:30 PM)
+    const hora = now.toTimeString().slice(0,5).replace(/:/g, '');
+    // 3. Agrega 2 números al azar (00-99) por seguridad
+    const aleatorio = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+    
+    // Une todo: PQR-20251024-143099
+    const nuevoID = `PQR-${fecha}-${hora}${aleatorio}`;
+    // ------------------------------------
+    
     const newPQR = {
-      id: `PQR-${Date.now().toString().slice(-6)}`,
+      id: `nuevoID-${Date.now().toString().slice(-6)}`,
       subscriberCode,
       ...subscriberData,
       ...formData,
